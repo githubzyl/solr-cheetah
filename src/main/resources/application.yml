@@ -1,0 +1,8 @@
+spring: 
+  data:
+      solr:
+        host: http://127.0.0.1:8983/solr
+server:
+  port: 10001
+  servlet:
+    context-path: /solr
