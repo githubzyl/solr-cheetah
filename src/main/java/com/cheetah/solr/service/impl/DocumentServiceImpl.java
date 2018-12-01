@@ -2,13 +2,12 @@ package com.cheetah.solr.service.impl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
-import org.apache.solr.client.solrj.response.FacetField;
-import org.apache.solr.client.solrj.response.FacetField.Count;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
@@ -18,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import com.cheetah.solr.common.SolrConnection;
 import com.cheetah.solr.common.SolrConstant;
+import com.cheetah.solr.common.SolrConversion;
 import com.cheetah.solr.model.SolrData;
 import com.cheetah.solr.model.SolrPage;
 import com.cheetah.solr.model.SolrQueryParam;
@@ -152,26 +152,18 @@ public class DocumentServiceImpl implements IDocumentService {
 			}
 		}
 		QueryResponse response = solrClient.query(solrQueryParam.getCollection(), solrQuery);
+		LinkedHashMap<String,Object> result = new LinkedHashMap<>();
+		result.put("responseHeader", SolrConversion.convertResponseHeader(response.getResponseHeader()));
+		result.put("response", SolrConversion.convertResponse(response.getResponse()));
 		//如果高亮
 		if(solrQueryParam.isHl()) {
-			return response.getHighlighting();
+			result.put("highlighting", response.getHighlighting());
 		}
 		//如果统计
 		if(solrQueryParam.isFacet() && ( null != solrQueryParam.getFacetField() && !"".equals(solrQueryParam.getFacetField()))) {
-			List<FacetField> facets = response.getFacetFields();//返回的facet列表
-			List<Map<String,Long>> data = new ArrayList<>();
-			Map<String,Long> res = null;
-			for (FacetField facet : facets) {
-				List<Count> counts = facet.getValues();
-				res = new HashMap<>();
-				for (Count count : counts) {
-					res.put(count.getName(), count.getCount());
-			    }
-				data.add(res);
-			}
-			return data;
+			result.put("facet_counts", SolrConversion.convertFactetCounts(response));
 		}
-		return response.getResults();
+		return result;
 	}
 
 	private SolrInputDocument createDocument(Map<String, Object> doc) {
